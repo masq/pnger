@@ -221,13 +221,15 @@ class PNGParser():
                     }]
                 )
 
-                print(self.validity['chunks'][chunk_type])
+                v = self.validity['chunks'][chunk_type]
+                print(v)
 
                 # Increment number of chunks of type encountered
                 encountered[chunk_type] = encountered.get(chunk_type, 0) + 1
+                chunk_type_index = encountered[chunk_type] - 1
 
                 # Perform chunk type order checks
-                self.validity['chunks'][chunk_type][encountered[chunk_type] - 1]['order'] = (
+                v[chunk_type_index]['order'] &= (
                     not (self.CHUNK_TYPES[chunk_type]['order'] & PNGParser.ChunkOrder.BEFORE_PLTE
                     and encountered.get(b'PLTE', False))
 
@@ -244,7 +246,7 @@ class PNGParser():
 
                 # Previous chunk order checks based on current chunk
                 if prev_chunk_type:
-                    self.validity['chunks'][prev_chunk_type][encountered[prev_chunk_type] - 1]['order'] = (
+                    self.validity['chunks'][prev_chunk_type][encountered[prev_chunk_type] - 1]['order'] &= (
                         # A chunk after alleged final chunk invalidates prev_chunk
                         not (self.CHUNK_TYPES[prev_chunk_type]['order'] & PNGParser.ChunkOrder.LAST)
 
@@ -259,7 +261,7 @@ class PNGParser():
                     )
 
                 # Multiplicity check
-                self.validity['chunks'][chunk_type][encountered[chunk_type] - 1]['multiplicity'] = (
+                v[chunk_type_index]['multiplicity'] &= (
                     not (encountered[chunk_type] > 1
                     and not self.CHUNK_TYPES[chunk_type]['multiplicity'])
                 )
@@ -276,7 +278,7 @@ class PNGParser():
                     'length': chunk_len+12, # data length + length, type, crc lengths
                     'type': chunk_type,
                     'type_flags': {self.CHUNK_TYPE_FLAGS[i]: not not x & 0x20 for i,x in enumerate(chunk_type)},
-                    'type_index': encountered[chunk_type] - 1,
+                    'type_index': chunk_type_index,
                     'data_length': hex(chunk_len),
                     'data': chunk_data,
                     'checksum': {
@@ -286,7 +288,7 @@ class PNGParser():
                 }
 
                 # Check checksum validity
-                self.validity['chunks'][chunk_type][encountered[chunk_type] - 1]['checksum'] = calc_crc == chunk_crc
+                v[chunk_type_index]['checksum'] = calc_crc == chunk_crc
 
                 # Append this chunk and move our offset along
                 chunks.append(chunk)

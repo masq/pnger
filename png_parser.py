@@ -27,6 +27,8 @@ class PNGParser():
         CONSECUTIVE = 1 << 5
         LAST = 1 << 6
 
+    HEADER_MAGIC = b'\x89PNG\r\n\x1a\n'
+
     CHUNK_TYPES = {
         b'IHDR': {
             'mandatory': True,
@@ -132,6 +134,7 @@ class PNGParser():
             Initialize the parser.
         """
         self._strict = strict
+        self.filename = filename
         self.validity = {
             'header': False,
             'chunks': {
@@ -147,29 +150,53 @@ class PNGParser():
             }
         }
 
-        self._chunks = self._parse(filename)
-        #print(self._chunks)
+        self._chunks = self._parse()
+        pprint(self._chunks)
         pprint(self.validity)
 
     def get_chunks(self):
         """
-            Return the chunks of the png
+            Generates the chunks of the png
         """
         yield from self._chunks
 
-    def get_bytes(self):
-        return b''
-        for chunk in self._chunks:
-            pass
+    def get_bytes(self, type_filter=None, filter_out=True):
+        """
+            Generates the bytes for a PNG file with an optional filter for
+            chunk types
 
-    #def _read_file(self, filename, chunk_size=4096):
-    #    with open(filename, 'rb') as infile:
-    #        chunk = infile.read(chunk_size)
-    #        while chunk:
-    #            yield chunk
-    #            chunk = infile.read(chunk_size)
+            type_filter: list of chunk types to filter
+            filter_out: boolean, default True, makes the filter filter chunk 
+                        types in or filter them out.
+        """
+        def filter_func(chunk):
+            """
+                Helper function to determine if a chunk should be included
+                in the output
+            """
+            tf = type_filter
+            # If no filter is set, everything should be included
+            if not isinstance(tf, list) or len(tf) < 1:
+                return True
 
-    def _parse(self, filename):
+            t = chunk['type']
+            fo = filter_out
+
+            result = (t in tf or t in map(lambda x: bytes(x, 'ascii'), tf))
+            print(t, not result if filter_out else result)
+            return not result if filter_out else result
+
+
+        with open(self.filename, 'rb') as infile:
+            yield PNGParser.HEADER_MAGIC
+            for chunk in filter(filter_func, self._chunks):
+                infile.seek(chunk['offset'])
+                yield infile.read(chunk['length'])
+
+    def get_chunk_types(self):
+        return list(self._chunks.keys())
+
+    def _parse(self):
         """
             Parse the png data
         """
@@ -185,7 +212,7 @@ class PNGParser():
         CTYP_LEN = 4
         CCRC_LEN = 4
 
-        with open(filename, 'rb') as png:
+        with open(self.filename, 'rb') as png:
             # Check the header
             # TODO: get parser to run with the file missing a header?
             # Implmt notes: probably want to check if parsing that, the type 
@@ -193,9 +220,9 @@ class PNGParser():
             # but there are potential problems with doing that because then the
             # chunk is also invalid... try except and make chunk['name'] validity
             # false
-            self.validity['header'] = png.read(HEADER_LEN) == b'\x89PNG\r\n\x1a\n'
+            self.validity['header'] = png.read(HEADER_LEN) == PNGParser.HEADER_MAGIC
 
-            offset = 8
+            offset = HEADER_LEN
             prev_chunk_type = b''
             chunk_type = b''
 
@@ -274,13 +301,13 @@ class PNGParser():
                 calc_crc  = binascii.crc32(chunk_type + chunk_data) & 0xFFFFFFFF
 
                 chunk = {
-                    'offset': hex(offset),
+                    'offset': offset,
                     'length': chunk_len+12, # data length + length, type, crc lengths
                     'type': chunk_type,
                     'type_flags': {self.CHUNK_TYPE_FLAGS[i]: not not x & 0x20 for i,x in enumerate(chunk_type)},
                     'type_index': chunk_type_index,
                     'data_length': hex(chunk_len),
-                    'data': chunk_data,
+                    'data_offset': hex(offset + 8),
                     'checksum': {
                         'stored': hex(chunk_crc),
                         'calculated': hex(calc_crc)

@@ -12,10 +12,10 @@ from png_parser import PNGParser
 
 def main(infile, outfile):
     pngp = PNGParser(filename=infile)
-    output = pngp.get_bytes()
 
     with open(outfile, 'wb') as out:
-        out.write(output)
+        for output in pngp.get_bytes(type_filter=['tEXt', 'bKGD'], filter_out=True):
+            out.write(output)
 
     return 
 

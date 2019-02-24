@@ -41,7 +41,7 @@ To name a few things I'd like to see though:
 * Validity explanations (e.g. This file is valid, e.g. This file is invalid because chunk 1 is not an IHDR chunk)
 
 # License
-Uhhh... TODO or GLTPL for now.
+MIT I suppose. Though, honestly, I'm not too stuck on that. If you have an actual opinion on the license of this software, please contact me about your concerns and we can work to sort it out.
 
 # Contributing
 Sure! Probably best if you open an issue or a PR against this repo and I can take a look at your bug/feature/code and we can see if we can work it in. :) Thanks for the help or use of my work, I'm glad it could be of use to someone other than me.

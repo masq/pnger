@@ -33,92 +33,109 @@ class PNGParser():
         b'IHDR': {
             'mandatory': True,
             'multiplicity': False,
-            'order': ChunkOrder.FIRST
+            'order': ChunkOrder.FIRST,
+
         },
         b'cHRM': {
             'mandatory': False,
             'multiplicity': False,
-            'order': ChunkOrder.BEFORE_PLTE | ChunkOrder.BEFORE_IDAT
+            'order': ChunkOrder.BEFORE_PLTE | ChunkOrder.BEFORE_IDAT,
+
         },
         b'gAMA': {
             'mandatory': False,
             'multiplicity': False,
-            'order': ChunkOrder.BEFORE_PLTE | ChunkOrder.BEFORE_IDAT
+            'order': ChunkOrder.BEFORE_PLTE | ChunkOrder.BEFORE_IDAT,
+
         },
         b'iCCP': {
             'mandatory': False,
             'multiplicity': False,
-            'order': ChunkOrder.BEFORE_PLTE | ChunkOrder.BEFORE_IDAT
+            'order': ChunkOrder.BEFORE_PLTE | ChunkOrder.BEFORE_IDAT,
+
         },
         b'sBIT': {
             'mandatory': False,
             'multiplicity': False,
-            'order': ChunkOrder.BEFORE_PLTE | ChunkOrder.BEFORE_IDAT
+            'order': ChunkOrder.BEFORE_PLTE | ChunkOrder.BEFORE_IDAT,
+
         },
         b'sRGB': {
             'mandatory': False,
             'multiplicity': False,
-            'order': ChunkOrder.BEFORE_PLTE | ChunkOrder.BEFORE_IDAT
+            'order': ChunkOrder.BEFORE_PLTE | ChunkOrder.BEFORE_IDAT,
+
         },
         b'PLTE': {
             'mandatory': False,
             'multiplicity': False,
-            'order': ChunkOrder.BEFORE_IDAT
+            'order': ChunkOrder.BEFORE_IDAT,
+
         },
         b'bKGD': {
             'mandatory': False,
             'multiplicity': False,
-            'order': ChunkOrder.BEFORE_IDAT | ChunkOrder.AFTER_PLTE
+            'order': ChunkOrder.BEFORE_IDAT | ChunkOrder.AFTER_PLTE,
+
         },
         b'hIST': {
             'mandatory': False,
             'multiplicity': False,
-            'order': ChunkOrder.BEFORE_IDAT | ChunkOrder.AFTER_PLTE
+            'order': ChunkOrder.BEFORE_IDAT | ChunkOrder.AFTER_PLTE,
+
         },
         b'tRNS': {
             'mandatory': False,
             'multiplicity': False,
-            'order': ChunkOrder.BEFORE_IDAT | ChunkOrder.AFTER_PLTE
+            'order': ChunkOrder.BEFORE_IDAT | ChunkOrder.AFTER_PLTE,
+
         },
         b'pHYs': {
             'mandatory': False,
             'multiplicity': False,
-            'order': ChunkOrder.BEFORE_IDAT
+            'order': ChunkOrder.BEFORE_IDAT,
+
         },
         b'sPLT': {
             'mandatory': False,
             'multiplicity': False,
-            'order': ChunkOrder.BEFORE_IDAT
+            'order': ChunkOrder.BEFORE_IDAT,
+
         },
         b'IDAT': {
             'mandatory': True,
             'multiplicity': True,
-            'order': ChunkOrder.IDAT | ChunkOrder.CONSECUTIVE
+            'order': ChunkOrder.IDAT | ChunkOrder.CONSECUTIVE,
+
         },
         b'tIME': {
             'mandatory': False,
             'multiplicity': False,
-            'order': ChunkOrder.NONE
+            'order': ChunkOrder.NONE,
+
         },
         b'iTXt': {
             'mandatory': False,
             'multiplicity': True,
-            'order': ChunkOrder.NONE
+            'order': ChunkOrder.NONE,
+
         }, 
         b'tEXt': {
             'mandatory': False,
             'multiplicity': True,
-            'order': ChunkOrder.NONE
+            'order': ChunkOrder.NONE,
+
         },
         b'zTXt': {
             'mandatory': False,
             'multiplicity': True,
-            'order': ChunkOrder.NONE
+            'order': ChunkOrder.NONE,
+
         },
         b'IEND': {
             'mandatory': True,
             'multiplicity': False,
-            'order': ChunkOrder.LAST
+            'order': ChunkOrder.LAST,
         },
     }
 
@@ -135,7 +152,7 @@ class PNGParser():
         """
         self._strict = strict
         self.filename = filename
-        self.validity = {
+        self._validity = {
             'header': False,
             'chunks': {
                 #{k: [{
@@ -152,7 +169,7 @@ class PNGParser():
 
         self._chunks = self._parse()
         pprint(self._chunks)
-        pprint(self.validity)
+        pprint(self._validity)
 
     def get_chunks(self):
         """
@@ -194,11 +211,25 @@ class PNGParser():
                 yield infile.read(chunk['length'])
 
     def get_chunk_types(self):
+        """
+            Returns a list of the different chunk types (names) encountered
+            within the PNG file.
+        """
         return list(self._chunks.keys())
+
+    def get_validity(self):
+        """
+            Returns whether the PNG is valid or not based on chunk validity
+            data.
+        """
+        return all(
+            all(c.values()) for ct in self._validity['chunks'] for c in self._validity['chunks'][ct] 
+        ) and self._validity['header']
 
     def _parse(self):
         """
-            Parse the png data
+            Parse the png data, reading from the filename passed at
+            instantiation.
         """
         encountered = {
             b'IHDR': 0,
@@ -220,7 +251,7 @@ class PNGParser():
             # but there are potential problems with doing that because then the
             # chunk is also invalid... try except and make chunk['name'] validity
             # false
-            self.validity['header'] = png.read(HEADER_LEN) == PNGParser.HEADER_MAGIC
+            self._validity['header'] = png.read(HEADER_LEN) == PNGParser.HEADER_MAGIC
 
             offset = HEADER_LEN
             prev_chunk_type = b''
@@ -237,19 +268,31 @@ class PNGParser():
                 prev_chunk_type = chunk_type
                 chunk_len, chunk_type = struct.unpack('>I4s', chunk_lentyp_raw)
 
+                # Create chunk def if it doesn't exist, otherwise use existing
+                self.CHUNK_TYPES[chunk_type] = self.CHUNK_TYPES.get(chunk_type, {
+                    'order': PNGParser.ChunkOrder.NONE,
+                    'mandatory': False,
+                    'multiplicity': False
+                })
+
                 # Valid until proven otherwise
-                self.validity['chunks'][chunk_type] = (
-                    self.validity['chunks'].get(chunk_type, []) + [{
+                self._validity['chunks'][chunk_type] = (
+                    self._validity['chunks'].get(chunk_type, []) + [{
                         'order': not (self.CHUNK_TYPES[chunk_type]['order'] & PNGParser.ChunkOrder.FIRST
                                     and any(encountered.values())),
                         'multiplicity': True,
                         'mandatory': True,
-                        'checksum': True
+                        'checksum': True,
+                        'name': all((
+                                    c | 0x20 >= ord('a')
+                                and c | 0x20 <= ord('z')
+                            )
+                            for c in chunk_type
+                        )
                     }]
                 )
 
-                v = self.validity['chunks'][chunk_type]
-                print(v)
+                v = self._validity['chunks'][chunk_type]
 
                 # Increment number of chunks of type encountered
                 encountered[chunk_type] = encountered.get(chunk_type, 0) + 1
@@ -273,7 +316,7 @@ class PNGParser():
 
                 # Previous chunk order checks based on current chunk
                 if prev_chunk_type:
-                    self.validity['chunks'][prev_chunk_type][encountered[prev_chunk_type] - 1]['order'] &= (
+                    self._validity['chunks'][prev_chunk_type][encountered[prev_chunk_type] - 1]['order'] &= (
                         # A chunk after alleged final chunk invalidates prev_chunk
                         not (self.CHUNK_TYPES[prev_chunk_type]['order'] & PNGParser.ChunkOrder.LAST)
 

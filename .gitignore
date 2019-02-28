@@ -1,3 +1,6 @@
+# pnger .gitignore file
+out.png
+
 # Vim swap files
 *.swp
 *.swo

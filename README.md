@@ -34,8 +34,6 @@ import png_parser
 I'll try to make GH issues for things that I want to build into this.. but it might not happen, it might just stay as TODOs in the code. I'm just working on this during my free time when I feel like it.
 
 To name a few things I'd like to see though:
-* Support for non-standard chunk names (e.g. Script crashes on undefined chunk names, fix this)
-* Validity checks on chunk names (i.e. is the chunk name only upper/lower case ascii characters)
 * Validity checks against specific chunks (e.g. is IDAT data well-formed?)
 * Stego checks (i.e. is there any data in the file that is intended to be hidden? e.g. LSB stego)
 * Validity explanations (e.g. This file is valid, e.g. This file is invalid because chunk 1 is not an IHDR chunk)

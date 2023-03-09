@@ -36,7 +36,19 @@ class PNGParser():
             'order': ChunkOrder.FIRST,
 
         },
+        b'acTL': {
+            'mandatory': False,
+            'multiplicity': False,
+            'order': ChunkOrder.BEFORE_PLTE | ChunkOrder.BEFORE_IDAT,
+
+        },
         b'cHRM': {
+            'mandatory': False,
+            'multiplicity': False,
+            'order': ChunkOrder.BEFORE_PLTE | ChunkOrder.BEFORE_IDAT,
+
+        },
+        b'cICP': {
             'mandatory': False,
             'multiplicity': False,
             'order': ChunkOrder.BEFORE_PLTE | ChunkOrder.BEFORE_IDAT,
@@ -49,6 +61,18 @@ class PNGParser():
 
         },
         b'iCCP': {
+            'mandatory': False,
+            'multiplicity': False,
+            'order': ChunkOrder.BEFORE_PLTE | ChunkOrder.BEFORE_IDAT,
+
+        },
+        b'mDCv': {
+            'mandatory': False,
+            'multiplicity': False,
+            'order': ChunkOrder.BEFORE_PLTE | ChunkOrder.BEFORE_IDAT,
+
+        },
+        b'mLUm': {
             'mandatory': False,
             'multiplicity': False,
             'order': ChunkOrder.BEFORE_PLTE | ChunkOrder.BEFORE_IDAT,
@@ -88,6 +112,19 @@ class PNGParser():
             'mandatory': False,
             'multiplicity': False,
             'order': ChunkOrder.BEFORE_IDAT | ChunkOrder.AFTER_PLTE,
+
+        },
+        b'eXIf': {
+            'mandatory': False,
+            'multiplicity': False,
+            'order': ChunkOrder.BEFORE_IDAT,
+
+        },
+        b'fcTL': {
+            'mandatory': False,
+            'multiplicity': True,
+            'order': ChunkOrder.NONE,
+            # more complicated than that; one may occur before IDAT, rest after IDAT
 
         },
         b'pHYs': {

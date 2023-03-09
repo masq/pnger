@@ -139,6 +139,13 @@ class PNGParser():
             'order': ChunkOrder.BEFORE_IDAT,
 
         },
+        b'fdAT': {
+            'mandatory': False,
+            'multiplicity': True,
+            'order': ChunkOrder.NONE,
+            # Needs a new AFTER_IDAT
+
+        },
         b'IDAT': {
             'mandatory': True,
             'multiplicity': True,
